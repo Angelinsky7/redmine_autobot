@@ -1,0 +1,21 @@
+<%= labelled_form_for @autobot, 
+      :as => :autobot, 
+      :url => autobot_edit_path(@project), 
+      :method => 'post' do |f| %>
+
+  <%= error_messages_for 'autobot' %>
+
+  <div class="box tabular">
+    <p><%= f.number_field :days_until_stale, :required => true, :min => 0, :max => 3600 %></p>
+    <p><%= f.number_field :days_until_close, :required => true, :min => 0, :max => 3600 %></p>
+    <p><%= f.text_field :only_labels, :size => 60 %></p>
+    <p><%= f.text_field :exempt_labels, :size => 60 %></p>
+    <p><%= f.text_field :exempt_milestones, :size => 60 %></p>
+    <p><%= f.text_field :exempt_assignees, :size => 60 %></p>
+    <p><%= f.text_field :stale_label, :required => true, :size => 60 %></p>
+    <p><%= f.text_area :mark_comment, :rows => 8, :class => 'autobot-edit' %></p>
+  </div>
+
+  <%= submit_tag l(:button_save) %>
+
+<% end %>
