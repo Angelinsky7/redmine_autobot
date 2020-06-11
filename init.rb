@@ -14,4 +14,14 @@ Redmine::Plugin.register :redmine_autobot do
     permission :redmine_autobot_manage, :autobot => :edit
   end
 
+  settings :default => {
+    'redmine_subprojects_issues' => false,
+    'redmine_autobot_user' => '',
+  },
+  :partial => 'settings/autobot_settings'
+
+end
+
+Rails.configuration.to_prepare do
+  Redmine::Plugin.find(:redmine_autobot).requires_redmine_plugin :redmine_tags, :version_or_higher => '3.2.1'
 end

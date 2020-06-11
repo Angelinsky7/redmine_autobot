@@ -2,7 +2,9 @@
 en:
   :redmine_autobot_manage: "Manage autobot settings"
   :redmine_autobot_menu_label: "Autobot"
-  
+  :label_setting_autobot_user: "Bot user"
+  :help_setting_autobot_user: "Specifies an user who posts automatic actions"
+
   :field_days_until_stale: "Days until stale"
   :field_days_until_close: "Days until close"
   :field_only_labels: "Only those labels"
@@ -11,6 +13,8 @@ en:
   :field_exempt_assignees: "Exempt those assigness"
   :field_stale_label: "Label to use when marking as stale"
   :field_mark_comment: "Comment to post when marking as stale"
+  :field_statuses: "Statuses to check"
+  :field_trackers: "Trackers to check"
 
   :redmine_autobot_days_until_stale_help: "Number of days of inactivity before an Issue or Pull Request becomes stale"
   :redmine_autobot_days_until_close_help: "Number of days of inactivity before an Issue or Pull Request with the stale label is closed. Set to false to disable. If disabled, issues still need to be closed manually, but will remain marked as stale."

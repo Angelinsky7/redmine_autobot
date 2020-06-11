@@ -10,6 +10,10 @@ class AutobotController < ApplicationController
 
   def edit
     @autobot = @project.autobot || Autobot.new(:project => @project)
+
+    params[:autobot][:statuses] = [] if params[:autobot][:statuses].nil?
+    params[:autobot][:trackers] = [] if params[:autobot][:trackers].nil?
+
     @autobot.safe_attributes= params[:autobot]
     @autobot.save if request.post?
 
