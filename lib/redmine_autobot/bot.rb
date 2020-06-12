@@ -4,8 +4,15 @@ module RedmineAutobot
   class Bot
 
     def self.preview
+      STDERR.puts("All this issue would be marked as staled: ")
       self.enumerate_issues_to_mark_as_staled do |issue, autobot|
-        STDERR.puts("issue found:  \##{issue.id} - '#{issue.updated_on}', tags: '#{issue.tags.join(', ')}' :: '#{issue.tag_list}' -> change tag to '#{autobot.stale_label}'")
+        STDERR.puts("issue found:  \##{issue.id} - '#{issue.updated_on}', tags: '#{issue.tags.join(', ')}' -> change tag to '#{autobot.stale_label}'")
+      end
+
+      STDERR.puts("Check for all staled issue to close:")
+
+      self.enumerate_issues_to_close do |issue, autobot|
+        STDERR.puts("issue found:  \##{issue.id} - '#{issue.updated_on}', tags: '#{issue.tags.join(', ')}' -> change closed")
       end
       
     end
@@ -13,7 +20,7 @@ module RedmineAutobot
     def self.execute
       config_user = Setting.plugin_redmine_autobot['autobot_user']
       user = get_user(config_user);
-
+      
       STDERR.puts("User executing:  #{user.name}")
       STDERR.puts("Check for all issue to mark as stale")
 
@@ -21,13 +28,27 @@ module RedmineAutobot
         self.enumerate_issues_to_mark_as_staled do |issue, autobot|
           unless autobot.stale_label.blank? 
             STDERR.puts "Marking issue \##{issue.id} (#{issue.subject}) as staled"
-            journal = issue.init_journal(user, autobot.mark_comment) unless autobot.mark_comment.blank?
+
+            unless autobot.mark_comment.blank?
+              issue.init_journal(user, autobot.mark_comment) 
+            else
+              issue.init_journal(user)
+            end
+
             issue.tag_list.push(autobot.stale_label.to_s)
             issue.save
           end
         end
         
         STDERR.puts("Check for all staled issue to close")
+
+        self.enumerate_issues_to_close do |issue, autobot|
+          status_closed = IssueStatus.find(autobot.close_status.to_i)
+          STDERR.puts "Closing issue \##{issue.id} (#{issue.subject}) with status: #{status_closed.name}"
+          issue.init_journal(user)
+          issue.status = status_closed
+          issue.save
+        end
 
       else  
         STDERR.puts("Cannot execute because not user was selected to execute the action. Please select a user in the config.")
@@ -41,13 +62,17 @@ module RedmineAutobot
       User.find_by_mail(user_id_or_email)
     end
 
-    def self.enumerate_issues_to_mark_as_staled      
-      enumerate_issues_with_option(true)
+    def self.get_tag_as_s(tags)
+      tags.collect{|t| t.name}
+    end
+
+    def self.enumerate_issues_to_mark_as_staled(&block)     
+      enumerate_issues_with_option(true, &block)
     end  
 
 
-    def self.enumerate_issues_to_close
-      enumerate_issues_with_option(false)
+    def self.enumerate_issues_to_close(&block)
+      enumerate_issues_with_option(false, &block)
     end
 
     def self.enumerate_issues_with_option(stale_mod)
@@ -78,14 +103,16 @@ module RedmineAutobot
           # STDERR.puts("versions_collection: #{versions_collection.nil?} - #{versions_collection}")
 
           issues.each do |issue|
-            filter_issue = stale_mod ? !issue.tags.include?(autobot.stale_label) : issue.tags.include?(autobot.stale_label)
-            filter_issue &= only_labels_collection.nil? || !(issue.tags.collect{|t| t.name} & only_labels_collection).empty?
-            filter_issue &= exempt_labels_collection.nil? || (issue.tags.collect{|t| t.name} & exempt_labels_collection).empty?
+            filter_issue = stale_mod ? !get_tag_as_s(issue.tags).include?(autobot.stale_label) : get_tag_as_s(issue.tags).include?(autobot.stale_label)
+            filter_issue &= only_labels_collection.nil? || !(get_tag_as_s(issue.tags) & only_labels_collection).empty?
+            filter_issue &= exempt_labels_collection.nil? || (get_tag_as_s(issue.tags) & exempt_labels_collection).empty?
             filter_issue &= versions_collection.nil? || !versions_collection.include?(issue.fixed_version_id)
             filter_issue &= assignees_collection.nil? || !assignees_collection.include?(issue.assigned_to_id)
-            # STDERR.puts("filter_issue #{filter_issue}");
+            # STDERR.puts("filter_issue \##{issue.id} : #{filter_issue}");
             yield [issue, autobot] if filter_issue
           end
+
+
 
         end
       end 

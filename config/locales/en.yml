@@ -16,6 +16,7 @@ en:
   :field_mark_comment: "Comment to post when marking as stale"
   :field_statuses: "Statuses to check"
   :field_trackers: "Trackers to check"
+  :field_close_status: "Status to use when closing staled issue"
 
   :redmine_autobot_days_until_stale_help: "Number of days of inactivity before an Issue or Pull Request becomes stale"
   :redmine_autobot_days_until_close_help: "Number of days of inactivity before an Issue or Pull Request with the stale label is closed. Set to false to disable. If disabled, issues still need to be closed manually, but will remain marked as stale."

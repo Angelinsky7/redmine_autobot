@@ -9,7 +9,7 @@ class Autobot < ActiveRecord::Base
     validates_presence_of :stale_label
     attr_protected :id
 
-    safe_attributes :days_until_stale, :days_until_close, :only_labels, :exempt_labels, :exempt_milestones, :exempt_assignees, :statuses, :trackers ,:stale_label, :mark_comment
+    safe_attributes :days_until_stale, :days_until_close, :only_labels, :exempt_labels, :exempt_milestones, :exempt_assignees, :statuses, :trackers ,:stale_label, :mark_comment, :close_status
 
     def statuses_as_array
       JSON.parse(statuses || "[]").collect{|t| t.to_i} 
