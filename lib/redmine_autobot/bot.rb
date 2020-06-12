@@ -6,13 +6,13 @@ module RedmineAutobot
     def self.preview
       STDERR.puts("All this issue would be marked as staled: ")
       self.enumerate_issues_to_mark_as_staled do |issue, autobot|
-        STDERR.puts("issue found:  \##{issue.id} - '#{issue.updated_on}', tags: '#{issue.tags.join(', ')}' -> change tag to '#{autobot.stale_label}'")
+        STDERR.puts("  issue found:  \##{issue.id} - '#{issue.updated_on}', tags: '#{issue.tags.join(', ')}' -> change tag to '#{autobot.stale_label}'")
       end
 
-      STDERR.puts("Check for all staled issue to close:")
+      STDERR.puts("\r\nCheck for all staled issue to close:")
 
       self.enumerate_issues_to_close do |issue, autobot|
-        STDERR.puts("issue found:  \##{issue.id} - '#{issue.updated_on}', tags: '#{issue.tags.join(', ')}' -> change closed")
+        STDERR.puts("  issue found:  \##{issue.id} - '#{issue.updated_on}', tags: '#{issue.tags.join(', ')}' -> change closed")
       end
       
     end
@@ -27,7 +27,7 @@ module RedmineAutobot
       unless config_user.nil?
         self.enumerate_issues_to_mark_as_staled do |issue, autobot|
           unless autobot.stale_label.blank? 
-            STDERR.puts "Marking issue \##{issue.id} (#{issue.subject}) as staled"
+            STDERR.puts "  Marking issue \##{issue.id} (#{issue.subject}) as staled"
 
             unless autobot.mark_comment.blank?
               issue.init_journal(user, autobot.mark_comment) 
@@ -40,11 +40,11 @@ module RedmineAutobot
           end
         end
         
-        STDERR.puts("Check for all staled issue to close")
+        STDERR.puts("\r\nCheck for all staled issue to close")
 
         self.enumerate_issues_to_close do |issue, autobot|
           status_closed = IssueStatus.find(autobot.close_status.to_i)
-          STDERR.puts "Closing issue \##{issue.id} (#{issue.subject}) with status: #{status_closed.name}"
+          STDERR.puts "  Closing issue \##{issue.id} (#{issue.subject}) with status: #{status_closed.name}"
           issue.init_journal(user)
           issue.status = status_closed
           issue.save
@@ -80,40 +80,45 @@ module RedmineAutobot
       projects = Project.active.has_module('redmine_autobot')
       
       projects.each do |project|
+        STDERR.puts("Checking project \##{project.id} - #{project.name}")
+
         unless project.autobot.nil?
           autobot = project.autobot;
-          statuses_to_check = IssueStatus.where("id IN (#{autobot.statuses_as_array.join(', ')})");
-          trackers_to_check = Tracker.where("id IN (#{autobot.trackers_as_array.join(', ')})");
-          offset_seconds_to_check = 86400 * (stale_mod ? autobot.days_until_stale : autobot.days_until_close)
+          status_array = autobot.statuses_as_array
+          tracker_array = autobot.trackers_as_array
 
-          issues = Issue.visible
-              .includes(:custom_values)
-              .where(project.project_condition(config_subproject))
-              .where("status_id IN (#{statuses_to_check.collect{|t| t.id}.join(', ')})")
-              .where("tracker_id IN (#{trackers_to_check.collect{|t| t.id}.join(', ')})")
-              .where("issues.updated_on < ?", Time.zone.now - offset_seconds_to_check)
-         
-          only_labels_collection = autobot.only_labels.collection_split_reject_strip unless autobot.only_labels.blank?
-          exempt_labels_collection = autobot.exempt_labels.collection_split_reject_strip unless autobot.exempt_labels.blank?
-          versions_collection = Version.where(:project => project).where("name IN (#{autobot.exempt_milestones.collection_split_reject_collect_join})").collect{|t| t.id} unless autobot.exempt_milestones.blank?
-          assignees_collection = User.where("login IN (#{autobot.exempt_assignees.collection_split_reject_collect_join})").collect{|t| t.id} unless autobot.exempt_assignees.blank?
+          if status_array.any? && tracker_array.any?
+            statuses_to_check = IssueStatus.where("id IN (#{status_array.join(', ')})");
+            trackers_to_check = Tracker.where("id IN (#{tracker_array.join(', ')})");
+            offset_seconds_to_check = 86400 * (stale_mod ? autobot.days_until_stale : autobot.days_until_close)
 
-          # STDERR.puts("only_labels_collection: #{only_labels_collection.nil?} - #{only_labels_collection}")
-          # STDERR.puts("exempt_labels_collection: #{exempt_labels_collection.nil?} - #{exempt_labels_collection}")
-          # STDERR.puts("versions_collection: #{versions_collection.nil?} - #{versions_collection}")
+            issues = Issue.visible
+                .includes(:custom_values)
+                .where(project.project_condition(config_subproject))
+                .where("status_id IN (#{statuses_to_check.collect{|t| t.id}.join(', ')})")
+                .where("tracker_id IN (#{trackers_to_check.collect{|t| t.id}.join(', ')})")
+                .where("issues.updated_on < ?", Time.zone.now - offset_seconds_to_check)
+           
+            only_labels_collection = autobot.only_labels.collection_split_reject_strip unless autobot.only_labels.blank?
+            exempt_labels_collection = autobot.exempt_labels.collection_split_reject_strip unless autobot.exempt_labels.blank?
+            versions_collection = Version.where(:project => project).where("name IN (#{autobot.exempt_milestones.collection_split_reject_collect_join})").collect{|t| t.id} unless autobot.exempt_milestones.blank?
+            assignees_collection = User.where("login IN (#{autobot.exempt_assignees.collection_split_reject_collect_join})").collect{|t| t.id} unless autobot.exempt_assignees.blank?
 
-          issues.each do |issue|
-            filter_issue = stale_mod ? !get_tag_as_s(issue.tags).include?(autobot.stale_label) : get_tag_as_s(issue.tags).include?(autobot.stale_label)
-            filter_issue &= only_labels_collection.nil? || !(get_tag_as_s(issue.tags) & only_labels_collection).empty?
-            filter_issue &= exempt_labels_collection.nil? || (get_tag_as_s(issue.tags) & exempt_labels_collection).empty?
-            filter_issue &= versions_collection.nil? || !versions_collection.include?(issue.fixed_version_id)
-            filter_issue &= assignees_collection.nil? || !assignees_collection.include?(issue.assigned_to_id)
-            # STDERR.puts("filter_issue \##{issue.id} : #{filter_issue}");
-            yield [issue, autobot] if filter_issue
+            # STDERR.puts("only_labels_collection: #{only_labels_collection.nil?} - #{only_labels_collection}")
+            # STDERR.puts("exempt_labels_collection: #{exempt_labels_collection.nil?} - #{exempt_labels_collection}")
+            # STDERR.puts("versions_collection: #{versions_collection.nil?} - #{versions_collection}")
+
+            issues.each do |issue|
+              filter_issue = stale_mod ? !get_tag_as_s(issue.tags).include?(autobot.stale_label) : get_tag_as_s(issue.tags).include?(autobot.stale_label)
+              filter_issue &= only_labels_collection.nil? || !(get_tag_as_s(issue.tags) & only_labels_collection).empty?
+              filter_issue &= exempt_labels_collection.nil? || (get_tag_as_s(issue.tags) & exempt_labels_collection).empty?
+              filter_issue &= versions_collection.nil? || !versions_collection.include?(issue.fixed_version_id)
+              filter_issue &= assignees_collection.nil? || !assignees_collection.include?(issue.assigned_to_id)
+              # STDERR.puts("filter_issue \##{issue.id} : #{filter_issue}");
+              yield [issue, autobot] if filter_issue
+            end
+
           end
-
-
-
         end
       end 
     end
