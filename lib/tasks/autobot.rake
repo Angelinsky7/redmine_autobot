@@ -3,7 +3,7 @@ namespace :autobot do
   desc <<-END_DESC
 Find affected issues and update them
   END_DESC
-  task :autobot => :environment do
+  task :execute => :environment do
     RedmineAutobot::Bot.execute()
   end
 

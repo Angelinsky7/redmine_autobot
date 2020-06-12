@@ -15,7 +15,7 @@ Redmine::Plugin.register :redmine_autobot do
   end
 
   settings :default => {
-    'redmine_subprojects_issues' => false,
+    'redmine_autobot_subprojects' => false,
     'redmine_autobot_user' => '',
   },
   :partial => 'settings/autobot_settings'

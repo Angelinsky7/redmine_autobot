@@ -3,6 +3,7 @@ en:
   :redmine_autobot_manage: "Manage autobot settings"
   :redmine_autobot_menu_label: "Autobot"
   :label_setting_autobot_user: "Bot user"
+  :label_setting_autobot_subproject: Check issues in subproject
   :help_setting_autobot_user: "Specifies an user who posts automatic actions"
 
   :field_days_until_stale: "Days until stale"

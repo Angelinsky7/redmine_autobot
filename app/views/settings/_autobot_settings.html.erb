@@ -1,4 +1,8 @@
 <p>
+  <label><%= l(:label_setting_autobot_subproject) %>:</label>
+  <%= check_box_tag 'settings[autobot_subprojects]', 1, 1 == @settings['autobot_subprojects'].to_i %>
+</p>
+<p>
   <label><%= l(:label_setting_autobot_user) %>:</label>
   <%= select_tag 'settings[autobot_user]', options_for_select(User.where(status: 1).collect{|u| [u.name,u.mail]}, @settings['autobot_user']) %><br />
   <em><%= l(:help_setting_autobot_user) %></em>
