@@ -91,13 +91,15 @@ module RedmineAutobot
             statuses_to_check = IssueStatus.where("id IN (#{status_array.join(', ')})");
             trackers_to_check = Tracker.where("id IN (#{tracker_array.join(', ')})");
             offset_seconds_to_check = 86400 * (stale_mod ? autobot.days_until_stale : autobot.days_until_close)
-
-            issues = Issue.visible
+            
+            issues = Issue
+                .includes(:project)
                 .includes(:custom_values)
                 .where(project.project_condition(config_subproject))
                 .where("status_id IN (#{statuses_to_check.collect{|t| t.id}.join(', ')})")
                 .where("tracker_id IN (#{trackers_to_check.collect{|t| t.id}.join(', ')})")
                 .where("issues.updated_on < ?", Time.zone.now - offset_seconds_to_check)
+                .references(:project)
            
             only_labels_collection = autobot.only_labels.collection_split_reject_strip unless autobot.only_labels.blank?
             exempt_labels_collection = autobot.exempt_labels.collection_split_reject_strip unless autobot.exempt_labels.blank?
